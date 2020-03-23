@@ -1,0 +1,60 @@
+<template>
+    <div class="home">
+        <text>data: {{a}}|</text>
+        <text>store: {{b}}|</text>
+        <text>computed: {{c}}|</text>
+        <text>watch: {{d}}|</text>
+    </div>
+</template>
+
+<script>
+const {
+    useConnect, usePage, useStore, useComputed, useWatch, useStat,
+    $store: { dispatch, getState }, $router
+} = getContext()
+
+export default useConnect(
+    useStat(function () {
+
+        return {
+            page: '首x页'
+        }
+    }),
+    useStore('Root', state => ({
+        b: state.b,
+    })),
+    useComputed({
+        c() {
+            return `${this.a}/${this.b}`
+        },
+    }),
+    useWatch({
+        ['c']() {
+            this.setData({ d: this.a + 1 })
+        }
+    }),
+    usePage({
+        data: {
+            a: 1,
+            d: 1,
+        },
+        onPageInit() {
+            setInterval(() => {
+                this.setData({ a: this.a + 1 })
+            }, 1000)
+
+            setTimeout(() => {
+                setInterval(() => {
+                    dispatch('Root/setB', this.b + 1)
+                }, 1000)
+            }, 500);
+        }
+    })
+)
+</script>
+
+<style>
+.home {
+  flex-direction: column;
+}
+</style>

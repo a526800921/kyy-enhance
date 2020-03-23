@@ -1,0 +1,148 @@
+<script>
+/**
+* 应用级别的配置，供所有页面公用
+*/
+const GL = global.__proto__ || global
+
+// 自动在所有页面当中引入 regeneratorRuntime
+// 交给插件自动引入，避免华为手机全局变量未注册成功导致错误
+// GL.regeneratorRuntime = require('@babel/runtime/regenerator')
+
+// 增强集
+import render from './render'
+
+const {
+  usePage,
+  useComponent,
+  useConnect,
+  addConnectQueue,
+  useWatch,
+  useComputed,
+  $native,
+  $router,
+  addRouteHooks,
+  addLifecycle,
+
+  $store,
+  addStore,
+  subscribe,
+  unsubscribe,
+  useStore,
+  storeReadyAfter,
+} = render
+
+// 工具集
+import * as $utils from './utils/utils'
+
+// 状态模块
+import storeModules from './store'
+
+// 添加store
+addStore(storeModules)
+
+// 埋点
+import useStat, { statInit, $stat, $nodeStat } from './stat'
+
+// 埋点初始化
+statInit({
+  addConnectQueue,
+  addRouteHooks,
+  addLifecycle,
+  $native,
+  $store,
+  usePage,
+  $utils,
+  $router,
+})
+
+// webview
+import useWebview, { webviewInit } from './webview'
+
+// webview初始化
+webviewInit({
+  addConnectQueue,
+  addLifecycle,
+  $router,
+  $store,
+})
+
+// 完成对组件 onShow onHide 的支持
+import componentEnhance from './render/componentEnhance'
+
+componentEnhance({
+  addLifecycle,
+  $stat,
+})
+
+// 在每个页面展示的时候 检测是否已添加桌面图标
+addLifecycle('onShow', function () {
+  $store.dispatch('Root/inspectHasInstalled')
+}, { target: 'page' })
+
+// 页面的多层退出
+// 只管 onShow 阻断， onHide onDestroy 不管了，因为可能有移除监听之类的操作
+addLifecycle('onShow', function () {
+  const { outPageNum } = $store.getState('Root')
+
+  if (outPageNum > 0) {
+    $store.dispatch('Root/setOutPageNum', outPageNum - 1)
+    $router.back()
+    return true // 阻断之后 onShow 的执行
+  }
+}, { target: 'page', priority: 0, interdict: true })
+
+// 页面自定义生命周期 -> store 初始化完成后执行
+addLifecycle('onInit', function (...arg) { this.onPageInit && storeReadyAfter(this.onPageInit.bind(this, ...arg)) })
+addLifecycle('onShow', function () { this.onPageShow && storeReadyAfter(this.onPageShow.bind(this)) })
+
+// 将架构绑到全局
+const context = {
+  usePage,
+  useComponent,
+  useConnect,
+  useWatch,
+  useComputed,
+  useStore,
+  useStat,
+  useWebview,
+
+  $store,
+  $router,
+  $native,
+  $utils,
+  $stat,
+  $nodeStat,
+}
+GL.getContext = () => context
+
+export default {
+  wanka_ssp_sdk: {},  // 声明 SDK 组件对象
+  appDuration: Date.now(),
+  onCreate() {
+    // 快应用启动埋点
+    $stat({
+      page: '启动',
+      target: '快应用启动',
+    });
+
+    // store 初始化完成
+    $store.onReady(() => {
+      // 进入快应用次数计数
+      $store.dispatch('Root/setEnterApp')
+      // 设置网络
+      $store.dispatch('Root/setNetwork')
+      // 获取系统信息
+      $store.dispatch('Root/getSystemInfo')
+    })
+  },
+  onDestroy() {
+    console.log('退出APP')
+
+    $stat({
+      page: '启动',
+      target: '快应用退出',
+      actionParams: { duration: Date.now() - this.$def.appDuration },
+    }, { outPage: true });
+  },
+}
+</script>

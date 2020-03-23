@@ -23,7 +23,6 @@
 * $stat(params) 自主埋点
     * $stat.getCurrentPage 获取当前页面信息 Promise
 * $nodeStat({ id, ...params }) 节点埋点
-* $third(target, data, options) 第三方埋点
 
 > useWebview 在当前页面使用webview
 
@@ -57,8 +56,6 @@
         * setItem(key, value) 设置缓存
         * getItem(key) 获取缓存
         * removeItem(key) 删除缓存
-        * getURI(url) 获取图片真实路径
-        * toActivity 活动类型跳转
         * iconInstall 添加桌面弹窗
         * addHook(key, callback) 处理钩子的函数，返回函数销毁当前钩子
         * getHook(key): Array<Function> 获取当前钩子队列
